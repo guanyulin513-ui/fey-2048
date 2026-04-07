@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>2048 Multiverse</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div>
+        <h1>2048 Multiverse</h1>
+        <p class="subtitle">Classic / Card / Block Battle</p>
+      </div>
+      <button id="themeToggle" class="icon-btn" aria-label="切換深色模式">🌙</button>
+    </header>
+
+    <main class="layout">
+      <section class="panel menu-panel">
+        <h2>開始遊戲</h2>
+
+        <label class="field">
+          <span>模式選擇</span>
+          <select id="modeSelect">
+            <option value="classic">Classic Mode</option>
+            <option value="card">Card Mode</option>
+            <option value="battle">Block Battle Mode</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>棋盤大小</span>
+          <select id="sizeSelect">
+            <option value="4">4 x 4</option>
+            <option value="5">5 x 5</option>
+            <option value="6">6 x 6</option>
+          </select>
+        </label>
+
+        <div class="actions">
+          <button id="startBtn" class="primary-btn">開始遊戲</button>
+          <button id="restartBtn" class="secondary-btn">重新開始</button>
+          <button id="pauseBtn" class="secondary-btn">暫停</button>
+        </div>
+
+        <div class="stats">
+          <article class="stat-card">
+            <span>分數</span>
+            <strong id="scoreValue">0</strong>
+          </article>
+          <article class="stat-card">
+            <span>最高分</span>
+            <strong id="bestValue">0</strong>
+          </article>
+        </div>
+
+        <section class="audio-panel">
+          <h3>音效控制</h3>
+          <label class="field">
+            <span>音量</span>
+            <input id="volumeRange" type="range" min="0" max="100" value="65" />
+          </label>
+          <div class="actions">
+            <button id="muteBtn" class="secondary-btn">靜音</button>
+            <button id="bgmBtn" class="secondary-btn">BGM：開</button>
+          </div>
+        </section>
+
+        <section class="help">
+          <h3>操作方式</h3>
+          <ul>
+            <li>電腦：方向鍵 / WASD</li>
+            <li>手機：滑動操作</li>
+            <li>Card 模式：低機率出現特殊卡牌</li>
+            <li>Battle 模式：敵人無法合併，需靠合併爆發傷害清掉</li>
+          </ul>
+        </section>
+      </section>
+
+      <section class="panel game-panel">
+        <div id="statusBar" class="status-bar">準備開始</div>
+
+        <div class="board-wrapper">
+          <div id="board" class="board board-size-4" aria-label="2048 遊戲棋盤"></div>
+          <div id="overlay" class="overlay hidden">
+            <div class="overlay-card">
+              <h2 id="overlayTitle">已暫停</h2>
+              <p id="overlayText">按下暫停或重新開始繼續。</p>
+              <button id="resumeBtn" class="primary-btn">繼續</button>
+            </div>
+          </div>
+          <div id="particleLayer" class="particle-layer"></div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
