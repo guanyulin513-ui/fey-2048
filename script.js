@@ -31,7 +31,6 @@ const app = (() => {
       audio.playUi("click");
       game.togglePause(false);
     },
-    onInput: (direction) => game.move(direction),
     onVolume: (value) => audio.setVolume(value),
     onMute: () => audio.toggleMute(),
     onBgm: () => audio.toggleBgm(),
@@ -61,6 +60,7 @@ const app = (() => {
   });
 
   ui.attachSwipe((direction) => game.move(direction));
+  ui.watchOrientation();
   game.start(ui.getConfig());
   return { game, ui, audio };
 })();
