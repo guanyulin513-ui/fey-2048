@@ -10,7 +10,6 @@ export class UIManager {
     this.overlayTextEl = document.getElementById("overlayText");
     this.particleLayer = document.getElementById("particleLayer");
     this.orientationLock = document.getElementById("orientationLock");
-    this.appShell = document.querySelector(".app-shell");
     this.controls = {
       mode: document.getElementById("modeSelect"),
       size: document.getElementById("sizeSelect"),
@@ -53,6 +52,24 @@ export class UIManager {
       size: Number(this.controls.size.value),
       mode: this.controls.mode.value,
     };
+  }
+
+  async requestLandscape() {
+    try {
+      const isTouchDevice =
+        ("ontouchstart" in window) ||
+        navigator.maxTouchPoints > 0 ||
+        navigator.msMaxTouchPoints > 0;
+
+      if (!isTouchDevice) return;
+
+      const orientation = screen.orientation;
+      if (orientation && typeof orientation.lock === "function") {
+        await orientation.lock("landscape");
+      }
+    } catch (_) {
+      // 某些瀏覽器不支援，忽略即可
+    }
   }
 
   render(state, meta = {}) {
@@ -222,18 +239,17 @@ export class UIManager {
   }
 
   watchOrientation() {
-    const isTouchDevice = () =>
-      ("ontouchstart" in window) ||
-      navigator.maxTouchPoints > 0 ||
-      navigator.msMaxTouchPoints > 0;
-
     const update = () => {
+      const isTouchDevice =
+        ("ontouchstart" in window) ||
+        navigator.maxTouchPoints > 0 ||
+        navigator.msMaxTouchPoints > 0;
+
       const portrait = window.innerHeight > window.innerWidth;
       const smallScreen = Math.max(window.innerWidth, window.innerHeight) <= 1180;
-      const shouldLock = isTouchDevice() && smallScreen && portrait;
+      const showHint = isTouchDevice && portrait && smallScreen;
 
-      this.orientationLock.classList.toggle("show", shouldLock);
-      this.appShell.classList.toggle("locked", shouldLock);
+      this.orientationLock.classList.toggle("show", showHint);
     };
 
     update();
