@@ -1,13 +1,12 @@
 const STORAGE_KEYS = {
   best: "multiverse-2048-best-score",
-  theme: "multiverse-2048-theme",
 };
 
 const DIRECTIONS = {
-  left: { axis: "row", reverse: false, delta: { x: -1, y: 0 } },
-  right: { axis: "row", reverse: true, delta: { x: 1, y: 0 } },
-  up: { axis: "col", reverse: false, delta: { x: 0, y: -1 } },
-  down: { axis: "col", reverse: true, delta: { x: 0, y: 1 } },
+  left: { axis: "row", reverse: false },
+  right: { axis: "row", reverse: true },
+  up: { axis: "col", reverse: false },
+  down: { axis: "col", reverse: true },
 };
 
 let tileId = 1;
@@ -19,7 +18,6 @@ export class GameEngine {
     this.onStatus = onStatus;
     this.onEffect = onEffect;
     this.audio = audio;
-
     this.size = 4;
     this.mode = "classic";
     this.state = [];
@@ -27,14 +25,12 @@ export class GameEngine {
     this.bestScore = Number(localStorage.getItem(STORAGE_KEYS.best) || 0);
     this.paused = false;
     this.gameOver = false;
-    this.turn = 0;
   }
 
   start({ size, mode }) {
     this.size = Number(size) || 4;
     this.mode = mode || "classic";
     this.score = 0;
-    this.turn = 0;
     this.paused = false;
     this.gameOver = false;
     this.state = this.createEmptyBoard();
@@ -54,7 +50,7 @@ export class GameEngine {
     if (this.gameOver) return;
     this.paused = typeof force === "boolean" ? force : !this.paused;
     this.emitStatus(this.paused ? "遊戲已暫停" : "遊戲繼續");
-    this.sync({ paused: this.paused });
+    this.sync();
   }
 
   move(direction) {
@@ -72,7 +68,6 @@ export class GameEngine {
     for (let index = 0; index < this.size; index += 1) {
       const line = this.extractLine(cloned, descriptor, index);
       const nonEmpty = line.filter(Boolean);
-
       let working = descriptor.reverse ? [...nonEmpty].reverse() : [...nonEmpty];
       const merged = [];
 
@@ -84,11 +79,7 @@ export class GameEngine {
         }
 
         const next = working[i + 1];
-        if (
-          next &&
-          next.type !== "enemy" &&
-          this.canMerge(current, next)
-        ) {
+        if (next && next.type !== "enemy" && this.canMerge(current, next)) {
           const mergedTile = this.createMergedTile(current, next);
           scoreGain += mergedTile.value;
           moveEvents.push({
@@ -138,28 +129,21 @@ export class GameEngine {
 
     this.state = cloned;
     this.score += scoreGain;
+
     if (scoreGain > 0) {
       this.audio.playMerge(scoreGain);
       if (this.mode === "battle") {
         this.resolveBattleDamage();
       }
-      if (this.mode === "card") {
-        this.resolveCardEffects();
-      }
     } else {
       this.audio.playSfx("move");
     }
 
-    this.turn += 1;
     this.addRandomTile();
 
-    if (this.mode === "card" && Math.random() < 0.14) {
-      this.addRandomTile(true);
-    }
-
     if (this.mode === "battle") {
-      if (Math.random() < 0.35) this.spawnEnemy();
-      this.damageEnemiesDecay();
+      if (Math.random() < 0.16) this.spawnEnemy();
+      this.decorateEnemies();
     }
 
     this.updateBest();
@@ -216,34 +200,26 @@ export class GameEngine {
     return cells;
   }
 
-  addRandomTile(forceSpecial = false) {
+  addRandomTile() {
     const empties = this.getEmptyCells();
     if (!empties.length) return false;
     const cell = empties[Math.floor(Math.random() * empties.length)];
-    const tile = this.createTile({
+    this.state[cell.y][cell.x] = this.createTile({
       x: cell.x,
       y: cell.y,
       value: Math.random() < 0.9 ? 2 : 4,
     });
-
-    if (this.mode === "card" && forceSpecial) {
-      tile.special = this.randomSpecialCard();
-      tile.card = true;
-    }
-
-    this.state[cell.y][cell.x] = tile;
     return true;
   }
 
-  createTile({ x, y, value, type = "number", special = null, hp = null }) {
+  createTile({ x, y, value, type = "number", hp = null }) {
     return {
       id: tileId++,
       x,
       y,
       value,
       type,
-      special,
-      hp: hp ?? (type === "enemy" ? Math.max(2, Math.floor(value / 2)) : Math.max(1, Math.floor(Math.log2(value)))),
+      hp: hp ?? (type === "enemy" ? Math.max(1, Math.floor(Math.log2(value)) - 1) : 0),
       justMerged: false,
       justSpawned: true,
       lastEffect: "",
@@ -251,7 +227,7 @@ export class GameEngine {
   }
 
   canMerge(a, b) {
-    return a.value === b.value && !a.special && !b.special && a.type === "number" && b.type === "number";
+    return a.value === b.value && a.type === "number" && b.type === "number";
   }
 
   createMergedTile(a, b) {
@@ -264,72 +240,19 @@ export class GameEngine {
     return tile;
   }
 
-  resolveCardEffects() {
-    const tiles = this.flatTiles();
-    tiles.forEach((tile) => {
-      if (!tile.special) return;
-      if (Math.random() > 0.45) return;
-
-      if (tile.special === "double") {
-        this.score += tile.value;
-        tile.lastEffect = "倍率 x2";
-        this.audio.playSfx("card");
-        this.onEffect?.({ type: "burst", x: tile.x, y: tile.y });
-      }
-
-      if (tile.special === "clear") {
-        const candidates = this.flatTiles().filter((item) => item.id !== tile.id && item.type !== "enemy");
-        const target = candidates[Math.floor(Math.random() * candidates.length)];
-        if (target) {
-          this.state[target.y][target.x] = null;
-          tile.lastEffect = "消除";
-          this.audio.playSfx("card");
-          this.onEffect?.({ type: "burst", x: target.x, y: target.y });
-        }
-      }
-
-      if (tile.special === "shuffle") {
-        const numbers = this.flatTiles().filter((item) => item.type !== "enemy");
-        const empties = [];
-        for (let y = 0; y < this.size; y += 1) {
-          for (let x = 0; x < this.size; x += 1) {
-            if (!this.state[y][x] || this.state[y][x].type !== "enemy") empties.push({ x, y });
-            if (this.state[y][x]?.type !== "enemy") this.state[y][x] = null;
-          }
-        }
-        const shuffled = [...numbers].sort(() => Math.random() - 0.5);
-        shuffled.forEach((item, index) => {
-          const spot = empties[index];
-          item.x = spot.x;
-          item.y = spot.y;
-          item.lastEffect = "洗牌";
-          this.state[spot.y][spot.x] = item;
-        });
-        tile.lastEffect = "洗牌";
-        this.audio.playSfx("card");
-      }
-    });
-  }
-
-  randomSpecialCard() {
-    const roll = Math.random();
-    if (roll < 0.45) return "double";
-    if (roll < 0.75) return "clear";
-    return "shuffle";
-  }
-
   spawnEnemy(force = false) {
     const empties = this.getEmptyCells();
     if (!empties.length) return false;
-    if (!force && Math.random() > 0.6) return false;
+    if (!force && Math.random() > 0.55) return false;
+
     const cell = empties[Math.floor(Math.random() * empties.length)];
-    const valueBase = [8, 16, 32][Math.floor(Math.random() * 3)];
+    const valueBase = [4, 8, 8, 16][Math.floor(Math.random() * 4)];
     this.state[cell.y][cell.x] = this.createTile({
       x: cell.x,
       y: cell.y,
       value: valueBase,
       type: "enemy",
-      hp: Math.max(2, Math.floor(Math.log2(valueBase)) + 1),
+      hp: Math.max(1, Math.floor(Math.log2(valueBase)) - 1),
     });
     return true;
   }
@@ -337,7 +260,7 @@ export class GameEngine {
   resolveBattleDamage() {
     const mergedTiles = this.flatTiles().filter((tile) => tile.justMerged);
     mergedTiles.forEach((tile) => {
-      const splash = Math.max(1, Math.floor(Math.log2(tile.value) / 2));
+      const splash = Math.max(1, Math.floor(Math.log2(tile.value) / 3) + 1);
       const neighbors = [
         [tile.x - 1, tile.y],
         [tile.x + 1, tile.y],
@@ -349,23 +272,25 @@ export class GameEngine {
         const target = this.getCell(x, y);
         if (!target || target.type !== "enemy") return;
         target.hp -= splash;
-        target.lastEffect = `-${splash} HP`;
+        target.lastEffect = `受傷 -${splash}`;
         target.justMerged = true;
         this.audio.playSfx("attack");
         this.onEffect?.({ type: "attack", x, y });
+
         if (target.hp <= 0) {
           this.score += target.value;
           this.state[y][x] = null;
           this.onEffect?.({ type: "burst", x, y });
+          this.emitStatus("敵人已被擊破");
         }
       });
     });
   }
 
-  damageEnemiesDecay() {
+  decorateEnemies() {
     this.flatTiles().forEach((tile) => {
-      if (tile.type === "enemy") {
-        tile.lastEffect = tile.lastEffect || `HP ${tile.hp}`;
+      if (tile.type === "enemy" && !tile.lastEffect) {
+        tile.lastEffect = "敵人";
       }
     });
   }
@@ -441,9 +366,8 @@ export class GameEngine {
 
   modeLabel() {
     return {
-      classic: "Classic Mode",
-      card: "Card Mode",
-      battle: "Block Battle Mode",
-    }[this.mode] || "Classic Mode";
+      classic: "經典模式",
+      battle: "敵人戰鬥模式",
+    }[this.mode] || "經典模式";
   }
 }
