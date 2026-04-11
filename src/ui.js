@@ -1,9 +1,3 @@
-const SPECIAL_LABELS = {
-  double: "x2",
-  clear: "消除",
-  shuffle: "洗牌",
-};
-
 export class UIManager {
   constructor(audio) {
     this.audio = audio;
@@ -15,6 +9,7 @@ export class UIManager {
     this.overlayTitleEl = document.getElementById("overlayTitle");
     this.overlayTextEl = document.getElementById("overlayText");
     this.particleLayer = document.getElementById("particleLayer");
+    this.orientationLock = document.getElementById("orientationLock");
     this.controls = {
       mode: document.getElementById("modeSelect"),
       size: document.getElementById("sizeSelect"),
@@ -32,6 +27,7 @@ export class UIManager {
     this.activeTiles = new Map();
     this.theme = localStorage.getItem("multiverse-2048-theme") || "light";
     document.body.classList.toggle("dark", this.theme === "dark");
+    this.controls.theme.textContent = this.theme === "dark" ? "☀️" : "🌙";
   }
 
   bindControls(handlers) {
@@ -46,7 +42,7 @@ export class UIManager {
     });
     this.controls.bgm.addEventListener("click", () => {
       const enabled = handlers.onBgm();
-      this.controls.bgm.textContent = `BGM：${enabled ? "開" : "關"}`;
+      this.controls.bgm.textContent = `背景音樂：${enabled ? "開" : "關"}`;
     });
     this.controls.theme.addEventListener("click", handlers.onTheme);
   }
@@ -117,7 +113,6 @@ export class UIManager {
     const gap = parseFloat(style.gap);
     const padding = parseFloat(style.paddingLeft);
     const tileSize = (rect.width - padding * 2 - gap * (size - 1)) / size;
-
     const seen = new Set();
 
     tiles.forEach((tile) => {
@@ -127,7 +122,7 @@ export class UIManager {
       if (!el) {
         el = document.createElement("div");
         el.className = "tile spawn";
-        el.innerHTML = `<span></span>`;
+        el.innerHTML = "<span></span>";
         this.boardEl.appendChild(el);
         this.activeTiles.set(tile.id, el);
       }
@@ -139,8 +134,7 @@ export class UIManager {
       el.style.top = `${padding + tile.y * (tileSize + gap)}px`;
       el.style.fontSize = `${Math.max(16, tileSize * 0.28)}px`;
       el.classList.toggle("merge", Boolean(tile.justMerged));
-      el.classList.toggle("attack-flash", tile.lastEffect.includes("HP") || tile.lastEffect.startsWith("-"));
-      el.classList.toggle("special-card", Boolean(tile.special));
+      el.classList.toggle("attack-flash", tile.lastEffect.includes("受傷"));
       el.classList.toggle("enemy", tile.type === "enemy");
     });
 
@@ -160,14 +154,17 @@ export class UIManager {
     el.style.color = palette.color;
 
     const main = el.querySelector("span");
-    const hp = tile.type === "enemy" ? `<div class="hp-label">HP ${tile.hp}</div>` : "";
-    const sub = tile.special
-      ? `<div class="sub-label">${SPECIAL_LABELS[tile.special] || tile.special}</div>`
-      : tile.lastEffect
-        ? `<div class="sub-label">${tile.lastEffect}</div>`
-        : "";
+    if (tile.type === "enemy") {
+      main.innerHTML = `
+        <div class="hp-label">HP ${tile.hp}</div>
+        ${tile.value}
+        <div class="enemy-note">敵人等級</div>
+      `;
+      return;
+    }
 
-    main.innerHTML = `${hp}${tile.value}${sub}`;
+    const sub = tile.lastEffect ? `<div class="sub-label">${tile.lastEffect}</div>` : "";
+    main.innerHTML = `${tile.value}${sub}`;
   }
 
   tilePalette(tile) {
@@ -221,6 +218,17 @@ export class UIManager {
       else onSwipe(dy > 0 ? "down" : "up");
       active = false;
     }, { passive: true });
+  }
+
+  watchOrientation() {
+    const update = () => {
+      const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+      const isSmallDevice = Math.min(window.innerWidth, window.innerHeight) < 1181;
+      this.orientationLock.classList.toggle("show", isPortrait && isSmallDevice);
+    };
+    update();
+    window.addEventListener("resize", update);
+    window.addEventListener("orientationchange", update);
   }
 
   toggleTheme() {
