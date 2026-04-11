@@ -59,12 +59,6 @@ button, select, input {
   flex-direction: column;
 }
 
-.app-shell.locked {
-  filter: blur(6px);
-  pointer-events: none;
-  user-select: none;
-}
-
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -355,21 +349,39 @@ body.dark select {
 
 .orientation-lock {
   position: fixed;
-  inset: 0;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
   display: none;
-  place-items: center;
-  padding: 24px;
-  background: rgba(15, 23, 42, 0.88);
   z-index: 999;
+  pointer-events: none;
 }
 
 .orientation-lock.show {
-  display: grid;
+  display: block;
+}
+
+.orientation-card {
+  width: min(92vw, 360px);
+  padding: 14px 18px;
+  background: rgba(15, 23, 42, 0.88);
+  color: #fff;
+}
+
+.orientation-card h2 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.orientation-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.4;
 }
 
 .phone-icon {
-  font-size: 3rem;
-  margin-bottom: 10px;
+  font-size: 1.8rem;
+  margin-bottom: 6px;
 }
 
 @keyframes popIn {
