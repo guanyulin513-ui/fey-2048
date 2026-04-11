@@ -2,16 +2,24 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2048 Multiverse</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>2048 多重宇宙</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
+  <div class="orientation-lock" id="orientationLock">
+    <div class="orientation-card">
+      <div class="phone-icon">📱↔️</div>
+      <h2>請橫向使用</h2>
+      <p>為了讓棋盤固定且操作更順暢，手機與平板請旋轉成橫向模式。</p>
+    </div>
+  </div>
+
   <div class="app-shell">
     <header class="topbar">
       <div>
-        <h1>2048 Multiverse</h1>
-        <p class="subtitle">Classic / Card / Block Battle</p>
+        <h1>2048 多重宇宙</h1>
+        <p class="subtitle">經典模式 / 敵人戰鬥模式</p>
       </div>
       <button id="themeToggle" class="icon-btn" aria-label="切換深色模式">🌙</button>
     </header>
@@ -23,9 +31,8 @@
         <label class="field">
           <span>模式選擇</span>
           <select id="modeSelect">
-            <option value="classic">Classic Mode</option>
-            <option value="card">Card Mode</option>
-            <option value="battle">Block Battle Mode</option>
+            <option value="classic">經典模式</option>
+            <option value="battle">敵人戰鬥模式</option>
           </select>
         </label>
 
@@ -63,7 +70,7 @@
           </label>
           <div class="actions">
             <button id="muteBtn" class="secondary-btn">靜音</button>
-            <button id="bgmBtn" class="secondary-btn">BGM：開</button>
+            <button id="bgmBtn" class="secondary-btn">背景音樂：開</button>
           </div>
         </section>
 
@@ -72,8 +79,8 @@
           <ul>
             <li>電腦：方向鍵 / WASD</li>
             <li>手機：滑動操作</li>
-            <li>Card 模式：低機率出現特殊卡牌</li>
-            <li>Battle 模式：敵人無法合併，需靠合併爆發傷害清掉</li>
+            <li>敵人戰鬥模式：敵人不能合併，要靠你合併方塊造成傷害</li>
+            <li>敵人身上的大數字是敵人等級值，左上角 HP 才是血量</li>
           </ul>
         </section>
       </section>
