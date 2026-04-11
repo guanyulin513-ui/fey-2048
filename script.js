@@ -14,12 +14,14 @@ const app = (() => {
   });
 
   ui.bindControls({
-    onStart: (config) => {
+    onStart: async (config) => {
+      await ui.requestLandscape();
       audio.unlock();
       audio.playUi("click");
       game.start(config);
     },
-    onRestart: (config) => {
+    onRestart: async (config) => {
+      await ui.requestLandscape();
       audio.playUi("click");
       game.start(config);
     },
