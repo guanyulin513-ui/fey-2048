@@ -59,6 +59,12 @@ button, select, input {
   flex-direction: column;
 }
 
+.app-shell.locked {
+  filter: blur(6px);
+  pointer-events: none;
+  user-select: none;
+}
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -402,18 +408,6 @@ body.dark select {
 
   .board-wrapper {
     width: min(78vw, 70vh, 560px);
-  }
-}
-
-@media (orientation: portrait) and (max-width: 1180px) {
-  .orientation-lock {
-    display: grid;
-  }
-
-  .app-shell {
-    filter: blur(6px);
-    pointer-events: none;
-    user-select: none;
   }
 }
 
