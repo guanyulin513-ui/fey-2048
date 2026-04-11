@@ -5,8 +5,7 @@ export class AudioManager {
     this.volume = 0.65;
     this.muted = false;
     this.bgmEnabled = true;
-    this.bgmOsc = null;
-    this.bgmLfo = null;
+    this.bgmNodes = [];
   }
 
   unlock() {
@@ -36,85 +35,81 @@ export class AudioManager {
 
   toggleBgm() {
     this.bgmEnabled = !this.bgmEnabled;
-    if (!this.bgmEnabled) {
-      this.stopBgm();
-    } else {
-      this.playBgm(true);
-    }
+    if (!this.bgmEnabled) this.stopBgm();
+    else this.playBgm(true);
     return this.bgmEnabled;
   }
 
   playUi(kind) {
-    const freq = kind === "switch" ? 460 : 620;
+    const freq = kind === "switch" ? 420 : 620;
     this.beep({ frequency: freq, duration: 0.06, type: "triangle", volume: 0.09 });
   }
 
   playSfx(kind) {
     const table = {
-      move: () => this.beep({ frequency: 180, duration: 0.05, type: "square", volume: 0.05 }),
-      bump: () => this.beep({ frequency: 120, duration: 0.08, type: "sawtooth", volume: 0.06 }),
-      card: () => {
-        this.beep({ frequency: 540, duration: 0.08, type: "triangle", volume: 0.07 });
-        this.beep({ frequency: 760, duration: 0.09, delay: 0.04, type: "triangle", volume: 0.06 });
-      },
+      move: () => this.beep({ frequency: 170, duration: 0.05, type: "square", volume: 0.05 }),
+      bump: () => this.beep({ frequency: 120, duration: 0.08, type: "sawtooth", volume: 0.05 }),
       attack: () => {
-        this.beep({ frequency: 160, duration: 0.06, type: "square", volume: 0.08 });
-        this.beep({ frequency: 110, duration: 0.08, delay: 0.03, type: "sawtooth", volume: 0.05 });
+        this.beep({ frequency: 150, duration: 0.06, type: "square", volume: 0.07 });
+        this.beep({ frequency: 110, duration: 0.08, delay: 0.03, type: "sawtooth", volume: 0.04 });
       },
       lose: () => {
-        this.beep({ frequency: 240, duration: 0.09, type: "triangle", volume: 0.06 });
-        this.beep({ frequency: 160, duration: 0.18, delay: 0.08, type: "triangle", volume: 0.06 });
+        this.beep({ frequency: 220, duration: 0.12, type: "triangle", volume: 0.05 });
+        this.beep({ frequency: 160, duration: 0.2, delay: 0.09, type: "triangle", volume: 0.05 });
       },
     };
     table[kind]?.();
   }
 
   playMerge(value) {
-    const note = Math.min(900, 260 + Math.log2(value) * 70);
-    this.beep({ frequency: note, duration: 0.1, type: "triangle", volume: 0.08 });
+    const note = Math.min(760, 220 + Math.log2(value) * 52);
+    this.beep({ frequency: note, duration: 0.1, type: "triangle", volume: 0.07 });
   }
 
   playBgm(loop = false) {
     if (!this.bgmEnabled) return;
     this.unlock();
-    if (!this.ctx || this.bgmOsc) return;
+    if (!this.ctx || this.bgmNodes.length) return;
 
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    const lfo = this.ctx.createOscillator();
-    const lfoGain = this.ctx.createGain();
+    const notes = [220, 277.18, 329.63];
+    notes.forEach((freq, index) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      gain.gain.value = index === 0 ? 0.018 : 0.012;
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+      osc.start();
+      this.bgmNodes.push(osc, gain);
+    });
 
-    osc.type = "sine";
-    osc.frequency.value = 196;
-    gain.gain.value = 0.025;
+    const sway = this.ctx.createOscillator();
+    const swayGain = this.ctx.createGain();
+    sway.type = "sine";
+    sway.frequency.value = 0.08;
+    swayGain.gain.value = 9;
+    sway.connect(swayGain);
 
-    lfo.type = "sine";
-    lfo.frequency.value = 0.4;
-    lfoGain.gain.value = 25;
+    for (let i = 0; i < this.bgmNodes.length; i += 2) {
+      const osc = this.bgmNodes[i];
+      swayGain.connect(osc.frequency);
+    }
 
-    lfo.connect(lfoGain);
-    lfoGain.connect(osc.frequency);
-    osc.connect(gain);
-    gain.connect(this.masterGain);
-
-    osc.start();
-    lfo.start();
-
-    this.bgmOsc = osc;
-    this.bgmLfo = lfo;
+    sway.start();
+    this.bgmNodes.push(sway, swayGain);
 
     if (!loop) {
-      setTimeout(() => this.stopBgm(), 1500);
+      setTimeout(() => this.stopBgm(), 3000);
     }
   }
 
   stopBgm() {
-    try {
-      this.bgmOsc?.stop();
-      this.bgmLfo?.stop();
-    } catch (_) {}
-    this.bgmOsc = null;
-    this.bgmLfo = null;
+    this.bgmNodes.forEach((node) => {
+      try { node.stop?.(); } catch (_) {}
+      try { node.disconnect?.(); } catch (_) {}
+    });
+    this.bgmNodes = [];
   }
 
   beep({ frequency = 440, duration = 0.08, delay = 0, type = "sine", volume = 0.08 }) {
