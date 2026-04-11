@@ -10,6 +10,7 @@ export class UIManager {
     this.overlayTextEl = document.getElementById("overlayText");
     this.particleLayer = document.getElementById("particleLayer");
     this.orientationLock = document.getElementById("orientationLock");
+    this.appShell = document.querySelector(".app-shell");
     this.controls = {
       mode: document.getElementById("modeSelect"),
       size: document.getElementById("sizeSelect"),
@@ -221,11 +222,20 @@ export class UIManager {
   }
 
   watchOrientation() {
+    const isTouchDevice = () =>
+      ("ontouchstart" in window) ||
+      navigator.maxTouchPoints > 0 ||
+      navigator.msMaxTouchPoints > 0;
+
     const update = () => {
-      const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-      const isSmallDevice = Math.min(window.innerWidth, window.innerHeight) < 1181;
-      this.orientationLock.classList.toggle("show", isPortrait && isSmallDevice);
+      const portrait = window.innerHeight > window.innerWidth;
+      const smallScreen = Math.max(window.innerWidth, window.innerHeight) <= 1180;
+      const shouldLock = isTouchDevice() && smallScreen && portrait;
+
+      this.orientationLock.classList.toggle("show", shouldLock);
+      this.appShell.classList.toggle("locked", shouldLock);
     };
+
     update();
     window.addEventListener("resize", update);
     window.addEventListener("orientationchange", update);
